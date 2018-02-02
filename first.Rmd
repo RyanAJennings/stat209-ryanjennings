@@ -1,0 +1,54 @@
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+```
+
+---
+title: "Favorite Restaurants"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reading the Data
+
+We will now read in the data recorded about the favorite restaurants of the student in the class. This data includes the name of the student, the name of the restaurant, the location of the restaurant (City, StateCode (ex. Richmond,VA)), the cuisine served at that restaurant, the student's favorite dish at that restaurant, the average cost of eating at that restaurant per person (double value, no $ symbol), the integer number of times that a student visits that restaurant per year, and the date that the student last visited that restaurant (in the format YYYY-MM).
+
+
+```{r}
+fav <- read_csv("C:\\Users\\rj7gt\\Desktop\\fav_restaurants.csv")
+```
+
+
+
+## Plotting the Data
+
+This bar graph shows the frequency of each type of cuisine of the student's favorite restaurants. The Y axis is the integer number of times one type of cuisine is listed in the data set. The X axis is the different types of cuisines.
+
+```{r}
+ggplot(fav, aes(cuisine)) +
+  geom_bar()
+```
+
+
+
+This graph shows the relationship between cost per person of a restaurant and the number of times the student visits that restaurant per year. The Y axis is the integer number of times that a student visits a certain restaurant per year. The X axis is the average cost per person of a meal at that restaurant. This graph shows that generally more people tend to frequent cheaper restaurants than more expensive ones.
+
+```{r}
+ggplot(fav, aes(yearly_visits, cost_per_person)) +
+  geom_point()
+```
+
+This bar graph shows the frequency of the locations that the restaurants are located in. As this graph shows, 'Richmond,VA' is the most popular location, which is predictable as the students polled are living in this city for school.
+
+```{r}
+ggplot(fav, aes(location)) +
+  geom_bar()
+```
+
+
+

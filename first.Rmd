@@ -1,5 +1,8 @@
 
-```{r}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warnings = FALSE)
 library(dplyr)
 library(readr)
 library(ggplot2)
@@ -10,17 +13,13 @@ title: "Favorite Restaurants"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ## Reading the Data
 
 We will now read in the data recorded about the favorite restaurants of the student in the class. This data includes the name of the student, the name of the restaurant, the location of the restaurant (City, StateCode (ex. Richmond,VA)), the cuisine served at that restaurant, the student's favorite dish at that restaurant, the average cost of eating at that restaurant per person (double value, no $ symbol), the integer number of times that a student visits that restaurant per year, and the date that the student last visited that restaurant (in the format YYYY-MM).
 
 
 ```{r}
-fav <- read_csv("C:\\Users\\rj7gt\\Desktop\\fav_restaurants.csv")
+fav <- read_csv("https://raw.githubusercontent.com/URstats/stat209-s18-RyanAJennings/master/fav_restaurants.csv")
 ```
 
 

@@ -1,0 +1,109 @@
+---
+title: "Lab 09: Annotating Data Visualizations"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(fig.height = 5)
+knitr::opts_chunk$set(fig.width = 8.5)
+knitr::opts_chunk$set(out.width = "100%")
+knitr::opts_chunk$set(dpi = 300)
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(viridis)
+theme_set(theme_minimal())
+```
+
+## Pick a dataset
+
+Today you'll have a choice of three datasets to work with. You can choose
+either to investigate Donald Trump's approval rating:
+
+```{r}
+trump <- read_csv("https://statsmaths.github.io/stat_data/trump_approval.csv")
+```
+
+Pick a dataset (feel free to delete the others from the Rmd file if you would
+like), and work on the instructions in the next section.
+
+## Instructions
+
+Your goal in this lab is to construct an interesting visualization with the
+data that you choose above. You should make use of several manual annotations
+in an effort to tell a visual story about the dataset. Below, you should
+eventually provide a few sentences describing what you found in the dataset
+and then a single plot illustrating the interesting aspects of the data.
+You should incorporate some external information into your plot.
+
+Note that you will certainly want to create many initial exploratory plots
+before settling on a final one for analysis. This time, make sure you that you
+upload both the Rmd and the html files to GitHub (remember, the final report
+should have just one single visualization).
+
+Also note that you will have to use the format `x = as.Date("2017-01-06")` to
+add annotations to an axis that uses time as a component.
+
+## Analysis
+
+The following plot shows Trump's approval rating (in terms of the % of people that approve of his actions as President) over time. The time range begins on January 23, 2017 until February 12, 2018. Some notable events that have occured during his Presidency have been noted at the respective dates that they occured. It appears that some of these notable events, which have been widely covered on media outlets, occur at critical points in the trend of the graph, where the approval rating will sharply increase or decrease beginning at these points. However, there is no way for me to definitively tell if these events directly impacted the approval ratings with the data given, as this may just be a coincidental correlation. 
+
+```{r}
+
+ggplot(trump, aes(date, approve)) +
+  geom_line(color = "green") + 
+  
+  annotate("point", x = as.Date("2018-01-30"), y = 40.68) +
+  annotate("text", x = as.Date("2018-02-14"), y = 40.7, label = "SOTU address") +
+
+  annotate("point", x = as.Date("2018-01-11"), y = 40.9217) +
+  annotate("text", x = as.Date("2017-12-18"), y = 40.9, label = "S--thole country comment") +
+  
+  annotate("point", x = as.Date("2018-01-02"), y = 40) +
+  annotate("text", x = as.Date("2018-01-25"), y = 40, label = "Nuclear button comment") + 
+  
+  annotate("point", x = as.Date("2017-12-06"), y = 40.18172) +
+  annotate("text", x = as.Date("2017-12-19"), y = 40.35, label = "Jerusalem comment") +
+  
+  annotate("point", x = as.Date("2017-11-29"), y = 40.27305) +
+  annotate("text", x = as.Date("2017-12-01"), y = 40.6, label = "Retweets Islamophobic video") +
+  
+  annotate("point", x = as.Date("2017-09-05"), y = 39.3034) +
+  annotate("text", x = as.Date("2017-09-20"), y = 39.3, label = "Recinds DACA") +
+
+  annotate("point", x = as.Date("2017-08-12"), y = 39.34763) +
+  annotate("text", x = as.Date("2017-09-10"), y = 38, label = "Charlottesville many sides comment") +
+
+  annotate("point", x = as.Date("2017-07-26"), y = 40.10891) +
+  annotate("text", x = as.Date("2017-07-02"), y = 40, label = "Military transgender ban") +
+
+  annotate("point", x = as.Date("2017-05-09"), y = 44.17577) +
+  annotate("text", x = as.Date("2017-05-27"), y = 44.2, label = "James Comey fired") +
+  
+  annotate("point", x = as.Date("2017-04-13"), y = 42.90318) +
+  annotate("text", x = as.Date("2017-04-25"), y = 42.9, label = "Bombs ISIS") +
+  
+  annotate("point", x = as.Date("2017-03-06"), y = 45.36596) +
+  annotate("text", x = as.Date("2017-03-20"), y = 45.2, label = "Immigration Executive Order") +
+  
+  annotate("point", x = as.Date("2017-03-04"), y = 45.63852) +
+  annotate("text", x = as.Date("2017-03-10"), y = 45.9, label = "Wiretap accusation") +
+  
+  annotate("point", x = as.Date("2017-01-28"), y = 44.38777) +
+  annotate("text", x = as.Date("2017-01-30"), y = 44.1, label = "Refugee ban")
+
+```
+
+
+
+
+
+
+
+
+
+

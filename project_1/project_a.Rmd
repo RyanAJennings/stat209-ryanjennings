@@ -1,0 +1,156 @@
+---
+title: "Gravestones at the Westhampton Memorial Graveyard"
+author: "Ryan Jennings"
+output: html_notebook
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(viridis)
+```
+
+# Gravestones at the Westhampton Memorial Graveyard
+
+## Overview
+
+  For this project, I visited the Westhampton Memorial Graveyard to collect data about the gravestones. I photographed a sample of 108 gravestones, being sure that the information printed or carved into the grave marker was clear and visible in the photographs as well as any floral decorations on or within a foot of the gravestone. I then examined these photos and recorded relevant data into an Excel table for use during analysis. I was interested in finding if any patterns exist within the set of gravestones in the Westhampton Memorial Graveyard.
+
+## Data dictionary
+
+Here is a data dictionary for the Gravestones at the Westhampton Memorial Graveyard dataset:
+
+- last_name : This character variable represents the last name (family name) that appears on the gravestone. last_name is formatted with the first letter of the name capitalized as well as any other appropriate letter capitalized as it appears on the gravestone (ex. "Jennings" or "McDonald").
+
+- sex : This categorical variable represents the sex of the person whose information appears on the gravestone. There are two categories: "male" and "female". Sexes were assumed based on the first name listed on the gravestone. If a name is ambigious or considered to be unisex by generally understood American name conventions, data was not collected for this individual gravestone to avoid false reporting.
+
+- birth_year : This numeric variable represents the birth year of the person whose information appears on the gravestone. This variable is recorded in the format YYYY (ex. 1960).
+
+- death_year : This numeric variable represents the death year of the person whose information appears on the gravestone. This variable is recorded in the format YYYY (ex. 2001).
+
+- lifespan : This numeric variable represents the approximate age of the person whose information appears on the gravestone at the time of their death. This variable is recorded in terms of years, calculated by subtracting the persons birth_year from their death_year. (ex. 56) Not all gravestones include the month of birth and death, so this variable is calculated using only the reported years, allowing it to be off by at most 1 year. (ex. A person who was born on April 3rd, 1960 and died on January 2nd, 2010 would actually have been 49 years old at the time of their death, but in this data set, their lifespan would be recorded as 50 years.)
+
+- relgious_symbol : This categorical variable represents the presence of a symbol of religion on the gravestone. There are two categories: "yes" and "no". For the purpose of this dataset, elements considered to be symbols of religion are the Christian cross, images of praying hands, images of books labelled "holy bible" or other relevant religious text titles, Ichthys (Christian-adopted fish symbol), and text mentions of religious text verses, God, Jesus, holiness, or other religious language cues, carved or printed on the gravestone. Any gravestone including any of these elements, no matter the size or number of them, is recorded as "yes" for this observation. If a gravestone does not include any of these elements, "no" is recorded for this observation.
+
+- military_symbol : This categorical variable represents the presence of a symbol of military service on the gravestone. There are two categories: "yes" and "no". For the purpose of this dataset, elements considered to be symbols of military service include text mentions of wars, veteran status, military medal recipient status, official military titles and their respective abbreviations (ex. "Lieutenant", "Lt", "Officer", etc.), and names of military branches (ex. "Navy", "Army", etc.). Any gravestone including any of these elements, no matter the size or number of appearences, is recorded as "yes" for this observation. If a gravestone does not include any of these elements, "no" is recorded for this observation.
+
+- flowers : This categorical variable represents the presence of live or artificial flower decorations on or directly near (within a foot) of the gravestone. There are two categories: "yes" and "no". Flower decorations of any color, amount, or type are considered to fall into the "yes" category. The absense of flower decorations of any kind on or directly near (within a foot) of the gravestone is considered to fall under the "no" category. 
+
+- share_tombstone : This categorical variable represents the whether the person whose information appears on the gravestone shares that same gravestone with another person. There are two categories: "yes" and "no". If two or more names appear on the same stone, structure, or plate serving as the grave marker, "yes" is recorded for this observation. If the stone, structure, or plate serving as the grave marker has only one persons information printed or carved onto it, "no" is recorded for this observation.
+
+Which can be read in as follows:
+```{r, message=FALSE}
+graves <- read_csv("https://raw.githubusercontent.com/urstats/stat209-s18-RyanAJennings/master/project_1/cemetery_data.csv")
+```
+
+```{r, echo=FALSE}
+graves
+```
+
+
+## Exploratory Analysis
+
+  Firstly, I was interested in exploring the relationship between the year of birth and the lifespan of the individual, as it is commonly known that lifespans have generally had an increasing trend due largely to the introduction of modern medicine and other social factors in recent centuries. To accomplish this, I have plotted the birth years of the individuals in the data set against their age at death, as seen below:
+
+
+```{r, echo=FALSE}
+
+female <- filter(graves, sex == "female")
+male <- filter(graves, sex == "male")
+
+ggplot(graves, aes(birth_year,lifespan)) + 
+  geom_point() + 
+  ylab("Age at Death") +
+  xlab("Birth Year")
+
+```
+  
+  This graph was surprising to me, because it seems that the trend is actually moving opposite to what one would expect. However, this data set is such a small sample with a very limited range of birth years, so any conclusions about what is generally happening in the population in relation to lifespan change over time would be difficult to support. 
+
+
+  I was then interested to explore the relationship between sex and the lifespan of the individual. Do males or females generally live longer than the opposite sex among those buried in Westhampton Memorial Graveyard, or is there no apparent difference between the lifespan of males and females in this dataset? 
+  
+```{r, echo=FALSE}
+
+female <- filter(graves, sex == "female")
+male <- filter(graves, sex == "male")
+
+ggplot(graves, aes(sex,lifespan)) + 
+  geom_point(color = "blue", data = male) + 
+  geom_point(color = "pink", data = female) + 
+  ylab("Age at Death") +
+  xlab("Sex")
+
+```
+
+  From simply looking at the graph, it is difficult to answer the questions posed above. To help with the analysis of this graph, the average lifespan of each sex is calculated below.
+  
+```{r, echo=FALSE}
+avgFemaleLifespan <- mean(female$lifespan)
+avgMaleLifespan <- mean(male$lifespan)
+```
+
+Average female lifespan:
+```{r, echo=FALSE}
+avgFemaleLifespan
+```
+
+Average male lifespan: 
+```{r, echo=FALSE}
+avgMaleLifespan
+```
+
+From this, we can conclude that the average female lifespan in the dataset is approximately 11.58 years greater than that of the average male lifespan in the dataset. According to the limited sample of data collected, females buried in the Westhampton Memorial Graveyard generally live a longer life than males buried in the Westhampton Memorial Graveyard.
+
+
+  Following from this interesting observation about the data, I was curious to investigate one possible cause of this contrast between average lifespans of males and females in this dataset. An observation that I made while collecting the data was that all gravestones that had military symbols carved into the stone were male. I failed to find a single gravestone in the area that I collected from that paired a female name with a military symbol. This is shown in the following graph:
+  
+
+```{r, echo=FALSE}
+
+ggplot(graves, aes(sex)) + 
+  geom_bar( aes(fill = military_symbol)) + 
+  ylab("Number of Individuals") + 
+  xlab("Sex")
+
+
+```
+  
+  
+  A hypothesis that I formed, considering the differences between average male/female lifespans and the graph above (showing that no data point indicated both female sex and military involvement in the same observation), was that perhaps the increased risk of injury and death that comes with military service may have contributed to the previously displayed disparity between male/female lifespans. Though I cannot prove causation between these aspects of the data, I found it to be an interesting point to consider. Below, I have shown graphically the relationship between the lifespan of an individual and the presence of a military symbol on their gravestone. Since we have already determined that there are no females in the data set who also have indicted military involvement on their gravestones, the graph below shows only data from male observations.
+
+
+```{r, echo=FALSE}
+
+military <- filter(male, military_symbol == "yes")
+
+ggplot(graves, aes(military_symbol,lifespan)) +
+  xlab("Military Symbol") + 
+  ylab("Lifespan") + 
+  geom_point() + 
+  geom_point(color = "red", data = military)
+
+```
+
+Again, from simply looking at the graph, it is difficult to answer whether or not military service seems to affect the lifespan of the individual. To aid the interpretation of this graph, the avegage lifespan of males who have indicated military involvement and of those who have not indicated military involvement.
+
+Average male lifespan with military involvement:
+```{r, echo=FALSE}
+mean(military$lifespan)
+```
+
+Average male lifespan without military involvement: 
+```{r, echo=FALSE}
+nonmilitary <- filter(male, military_symbol == "no")
+
+mean(nonmilitary$lifespan)
+```
+
+It is possible now to see that, in the limited sample of gravestones in Westhampton Memorial Graveyard, the average male without military involvement lives on average 3.45 years longer than the average male with military involvement.
+
+## Conclusion
+
+  The analysis of the data collected in the Westhampton Memorial Graveyard, as shown above, allowed me to learn more about the relationships that exist between the individuals buried here. Specifically, I chose to examine first the relationship between birth years and lifespans of the individuals in the sample collected through the information carved or printed on their gravestones. I was then interested to see if there exists a difference between lifespans of male and female individuals in the data set. According the the very limited sample, it is shown that females buried in the inspected area of Westhampton Memorial Graveyard tend to live longer lives than males buried in the same place. Upon reaching this conclusion, I was interested to investigate the possible causes of this disparity. I then explored whether military involvement lowered the average lifespan of an individual, given the fact that all recorded military symbols appeared on male gravestones. It was shown that, on average, the lifespan of males who were involved in the military is 3.45 years lower than those who did not appear to be involved in the military based on their gravestone markings. Though I cannot prove causality between this observation and the disparity between male and female lifespans, or the other aspects investigated, it was fascinating to see the relationships that exist in the collected sample of data.

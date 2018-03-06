@@ -1,0 +1,137 @@
+---
+title: "Boston-Cambridge-Newton CBSA Inner-City vs. Surrounding Area"
+author: "Ryan Jennings"
+output: html_notebook
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(fig.height = 5)
+knitr::opts_chunk$set(fig.width = 8.5)
+knitr::opts_chunk$set(out.width = "100%")
+knitr::opts_chunk$set(dpi = 300)
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(ggmap)
+library(viridis)
+library(forcats)
+library(smodels)
+library(reshape2)
+```
+
+
+```{r}
+# All data
+tracts <- read_csv("https://raw.githubusercontent.com/statsmaths/stat_data/gh-pages/acs_tract_data_2016.csv.gz")
+
+# Boston/Cambridge/Newton data
+acs_boston <- filter(tracts, cbsa == "Boston-Cambridge-Newton, MA-NH")
+
+# Subset of data on each county for convex hull county graph
+acs_boston_county <- select(acs_boston, county, lon, lat)
+
+# For convex hull representation of counties within the studied area
+dataf <- data.frame(
+  x = rnorm(100),
+  y = c(rnorm(50,-1), rnorm(50,1)),
+  cat = rep(c("A","B"), each=50)
+  )
+
+acs_boston_county_chulls <- ddply(acs_boston_county, .(county), function(df) df[chull(df$lon, df$lat), ])
+
+# Income data summarized by county
+acs_income_temp <- select(acs_boston, county, starts_with("income_"))
+acs_income_temp <- summarize_all(group_by(acs_income_temp, county), mean)
+acs_income <- melt(acs_income_temp, id = c("county"))
+
+# Race data summarized by county
+acs_race_temp <- select(acs_boston, county, starts_with("race_"))
+acs_race_temp <- summarize_all(group_by(acs_race_temp, county), mean)
+acs_race <- melt(acs_race_temp, id = c("county"))
+
+```
+
+## Introduction
+
+The location I will explore in this project is the Boston-Cambridge-Newton CBSA. Specifically, I will examine the trends in data when comparing the inner-city Boston area with the outskirts. Below is a map of this area with labelled counties. I will use the term "inner-city" to refer to Suffolk County, shown below in pink. This is the county with the highest population density among all counties studied, with approximately 13,179 people per square mile. (Social Explorer, 2018) 
+
+```{r}
+# This is not one of my three graphs, this is just to show the location of the counties so that the rest of the report makes sense.
+qmplot(lon, lat, data = acs_boston, geom = "blank") +
+  geom_polygon(data=acs_boston_county_chulls, aes(x=lon, y=lat, fill=county), alpha=0.8)
+```
+
+## Median Rent
+
+The plot below shows the median rent in the Boston-Cambridge-Newton area split into three categories. The red points represent a lower median rent, the green represents a mid-range median rent, and the blue points represent a high median rent. The blue points are largely condensed in the inner-city (Suffolk County area), which makes sense as it is generally more expensive to live in the center of the city than on the outskirts. In fact, the Boston Globe released a story in 2015 that noted a 14% increase in rent costs between 2013 and 2014 in just the Suffolk County area, while surrounding areas only saw an increase of about 5.5% (Horowitz, 2015). To put this increase in perspective, Time Money released a story in April of 2016 that ranked the city of Boston #3 in the most expensive cities to rent in in the United States, surpassed only by San Francisco, CA and New York City, NY (Renzulli, 2016).
+
+```{r}
+qmplot(lon, lat, data = acs_boston, geom = "blank") +
+  geom_point(aes(color = bin(median_rent,3)), alpha = 0.7)
+```
+
+## Income and Rent Affordability
+
+Considering the high cost of living in Suffolk County, the next practical question is whether the average person in these locations can actually afford such a high price. To examine this question, I have plotted the incomes of people in the Boston-Cambridge-Newton area by the county in which they reside. Although Suffolk County generally seems to be the most expensive place to live of out of the counties studied, Suffolk County also has the highest percentage of people with the lowest bracket income at approximately 7%. Other counties tend to have less than half of this percentage of people living on the lowest bracket income. Interestingly, it appears that the counties with the highest percentage of people earning the highest bracket income are Norfolk and Middlesex County, which are located directly outside of the Suffolk County area. The high percentage of people living on the lowest bracket income in Suffolk County may be indicative of a predominantly poor neighborhood near the Roxbury/Dorchester area, which can be seen on the previous graph in the small cluster of red data points just below the "Boston" tag (Harvard, 2018). The Roxbury neighborhood in particular has a high percent of people living in poverty, at approximately 36.2% in a report from a five-year estimate between 2008-2012 (BRA Research Division, 2014). Suffolk County also has the lowest median household income out of the studied counties, at approximately 54,432 2016 inflation-adjusted US dollars. Meanwhile, Norfolk County has the highest median household income out of the studied counties, at approximately 90,226 2016 inflation-adjusted US dollars (Social Explorer, 2018).
+
+```{r}
+ggplot(acs_income, aes(variable, value))+
+  geom_col(aes(fill = variable)) + 
+  facet_wrap(~county) +
+  coord_flip() + 
+  theme_minimal()
+
+```
+
+## Race
+
+Having noted the income differences in the set of counties in the Boston-Cambridge-Newton area, the final question to explore is if there are differences in the distribution of people identifying as different races among the counties, especially between the inner-city and surrounding areas. As shown below, each of the counties have a predominantly white population, with Rockingham and Strafford County being the least diverse of the set. Suffolk County, on the other hand, is the most racially diverse in the Boston-Cambridge-Newton area, with approximately 55.4% of the population being White alone, 22.6% Black/African-American, 8.6% Asian alone, 6.2% two or more races, and 6.9% other (Social Explorer, 2018). The categories not mentioned (Pacific Islander and Indigenous American) did not sum to a significant portion of the population, as evident in the visualizations for all studied counties.   
+
+```{r}
+ggplot(acs_race, aes(x = factor(1), y = value, fill = variable))+
+  geom_bar(width = 1, stat="identity") + 
+  facet_wrap(~county) +
+  coord_polar(theta = "y") + 
+  theme_minimal() + 
+  scale_fill_brewer(palette="Spectral") + 
+  ylab("") + 
+  xlab("") +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), panel.grid = element_blank())
+
+```
+
+## Conclusion
+
+Drawing from the visualizations and analysis above, several conclusions can be made about the Boston-Cambridge-Newton area. Specifically, many outstanding differences exist between inner-city Boston (Suffolk County) and the surrounding areas. In the first visualization, it was shown that the median rent is generally higher in Suffolk County than in the other counties. This was expected in the data, as metropolitan areas are known to have higher-cost housing. In the second visualization, relationships between the percent of people living under certain income brackets and the county in which they live were explored. It was found that Suffolk County, the inner-city, has the highest percent of people living under the lowest income bracket. This could possibly be representative of the people living in certain poor neighborhoods within the city of Boston. Alternatively, Norfolk and Middlesex Counties had a rather high percentage of people living under the largest income bracket as compared to the other counties. Lastly, racial differences in the population were explored in each county. The final visualization shows that Suffolk County has the largest diversity in race among all studied counties, while the populations of Rockingham and Stafford Counties are overwhelmingly white with very little diversity. 
+
+## References
+
+Data & Analysis References:
+
+Social Explorer ACS 2016 5-year Estimates. Social Explorer, 2018. (https://www.socialexplorer.com/tables/ACS2016_5yr/R11613828)
+
+Boston Globe, "Housing for Middle Class Families in Boston is a Struggle". Horowitz, 2015. (https://www.bostonglobe.com/business/2015/07/02/how-expensive-housing-boston/P7CWoHv30xvz2jJ9M9YMhP/story.html)
+
+Boston Magazine, ""(https://www.bostonmagazine.com/property/2018/02/20/minimum-salary-own-apartment-boston/)
+
+Money (Time Inc.), "10 Most Expensive Cities to be a Renter". Renzulli, 2016. http://time.com/money/4287132/most-expensive-cities-to-rent/
+
+Boston Redevelopment Authority (Research Division), "Poverty in Boston". BRA Research Division, 2014. (http://www.bostonplans.org/getattachment/f1ecaf8a-d529-40b6-a9bc-8b4419587b86)
+
+Harvard School of Public Health, "Boston Neighborhood Borders". Harvard, 2018. (https://www.hsph.harvard.edu/diversity/neighborhood-maps/)
+
+
+
+Code References:
+
+Convex Hulls to show locations of each county: https://gist.github.com/rmaia/5296401
+
+Color themes: http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/
+
+Pie charts: http://ggplot2.tidyverse.org/reference/coord_polar.html, https://stackoverflow.com/questions/22243860/how-to-remove-coordinate-in-pie-chart-generated-by-ggplot2
+

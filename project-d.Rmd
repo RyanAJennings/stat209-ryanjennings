@@ -1,0 +1,238 @@
+---
+title: "NBA: Factors that Affect Whether a Shot is Missed or Made"
+author: "Ryan Jennings"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(out.width = "100%")
+knitr::opts_chunk$set(dpi = 300)
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(ggmap)
+library(viridis)
+library(forcats)
+library(smodels)
+library(reshape2)
+```
+
+
+```{r}
+
+# What factors might affect whether a shot is made or missed?
+# - distance
+# - shot clock (less time, more pressure)
+#     - buzzer beaters
+# - defender mismatch (taller defender, more misses; taller shooter, less misses)
+#     - pt size = shooter height - defender height // how much taller is the shooter?
+# 
+# Expansion:
+# - look at teams where this is true
+# - look at "clutch" players
+
+
+nba_shots <- read_csv("https://statsmaths.github.io/stat_data/nba_shots.csv")
+
+###########################################################################
+# DISTANCE SHOT FROM #
+
+# Inside the rectangle
+nba_shots$dist_shot_from <- "0-15"
+# Outside of rectangle, inside of 3-point line
+nba_shots$dist_shot_from[between(nba_shots$shot_dist, 16, 22)] <- "16-22"
+# Outside of 3-point line
+nba_shots$dist_shot_from[between(nba_shots$shot_dist, 23, 50)] <- "23-50"
+###########################################################################
+
+
+###########################################################################
+# SHOT CLOCK #
+
+nba_shots$clock_bucket <- "0-5"
+nba_shots$clock_bucket[between(nba_shots$shot_clock, 6, 24)] <- "6-24"
+
+nba_clock_sum <- group_summarize(nba_shots, clock_bucket)
+###########################################################################
+
+
+###########################################################################
+# SHOOTER-DEFENDER HEIGHT MISMATCH
+# (POSITIVE VALUE -> SHOOTER IS TALLER)
+# (0 -> EQUAL HEIGHT)
+# (NEGATIVE VALUE -> DEFENDER IS TALLER)
+
+nba_shots$mismatch <- nba_shots$shooter_height - nba_shots$defender_height
+
+# CATEGORIES: 
+# Defender significantly taller (-20-(-5))
+# Defender slightly taller (-4-(-2))
+# Match (-1-1)
+# Shooter slightly taller (2, 4)
+# Shooter significantly taller (5, 20)
+nba_shots$mismatch_categories <- "Defender Significantly Taller (-20-(-5))"
+nba_shots$mismatch_categories[between(nba_shots$mismatch, -4, -2)] <- "Defender Slightly Taller (-4-(-2))"
+nba_shots$mismatch_categories[between(nba_shots$mismatch, -1, 1)] <- "Equal Matchup (-1-1)"
+nba_shots$mismatch_categories[between(nba_shots$mismatch, 2, 4)] <- "Shooter Slightly Taller (2-4)"
+nba_shots$mismatch_categories[between(nba_shots$mismatch, 5, 20)] <- "Shooter Significantly Taller (5-20)"
+###########################################################################
+
+# Red/Green Palette
+rgPalette <- c("#33CC33", "#CC0000")
+
+```
+
+Thesis:
+Shots attempted from further distances, in the final five seconds of the shot clock, or against significantly taller defenders are more likely to be misses than shots attempted closer to the basket, with more than five seconds on the shot clock, or when matched against a shorter defender.
+
+Using the NBA shots data, I wanted to analyze the different factors behind whether a shot is likely to be missed or made. I first investigated the relationship between the distance that the shooter is from the basket and the result of the shot. I separated these distances into three categories that roughly represent shots taken inside of the paint, outside of the paint but inside of the three-point line, and outside of the three-point line. I collected these rough measurements from the official NBA rulebook (http://www.nba.com/analysis/rules_1.html). A relatively obvious hypothesis to make is that the further the shot is taken from the basket, the more likely it is to be a miss.
+
+```{r}
+# SHOT RESULT BASED ON DISTANCE SHOT FROM
+
+shots_from_0_15 <- filter(nba_shots, dist_shot_from == "0-15")
+shots_from_16_22 <- filter(nba_shots, dist_shot_from == "16-22")
+shots_from_23_50 <- filter(nba_shots, dist_shot_from == "23-50")
+
+sum_missed_0_15 <- sum(with(shots_from_0_15, shot_result == "missed"))
+sum_made_0_15 <- sum(with(shots_from_0_15, shot_result == "made"))
+total_0_15 <- sum_missed_0_15 + sum_made_0_15
+
+sum_missed_16_22 <- sum(with(shots_from_16_22, shot_result == "missed"))
+sum_made_16_22 <- sum(with(shots_from_16_22, shot_result == "made"))
+total_16_22 <- sum_missed_16_22 + sum_made_16_22
+
+sum_missed_23_50 <- sum(with(shots_from_23_50, shot_result == "missed"))
+sum_made_23_50 <- sum(with(shots_from_23_50, shot_result == "made"))
+total_23_50 <- sum_missed_23_50 + sum_made_23_50
+
+
+percent_missed_0_15 <- round((sum_missed_0_15 / total_0_15) * 100, digits = 2)
+percent_made_0_15 <- round((sum_made_0_15 / total_0_15)* 100, digits = 2)
+
+percent_missed_16_22 <- round((sum_missed_16_22 / total_16_22)* 100, digits = 2)
+percent_made_16_22 <- round((sum_made_16_22 / total_16_22) * 100, digits = 2)
+
+percent_missed_23_50 <- round((sum_missed_23_50 / total_23_50)* 100, digits = 2)
+percent_made_23_50 <- round((sum_made_23_50 / total_23_50)* 100, digits = 2)
+
+ggplot(nba_shots, aes(dist_shot_from)) + 
+  scale_fill_manual(values=rgPalette) +
+  geom_bar(aes(fill = shot_result)) + 
+  xlab("Distance Shot From (feet)") + 
+  ylab("Shots Attempted") +
+  annotate("text", x = 1, y = 20000, label = paste(percent_missed_0_15, "%"), color = "white") + 
+  annotate("text", x = 1, y = 60000, label = paste(percent_made_0_15, "%"), color = "white") + 
+  annotate("text", x = 2, y = 7000, label = paste(percent_missed_16_22, "%"), color = "white") + 
+  annotate("text", x = 2, y = 19000, label = paste(percent_made_16_22, "%"), color = "white") + 
+  annotate("text", x = 3, y = 10000, label = paste(percent_missed_23_50, "%"), color = "white") + 
+  annotate("text", x = 3, y = 25000, label = paste(percent_made_23_50, "%"), color = "white")
+```
+
+As shown by this graph, shots attempted from 0-15 feet from the basket generally have about a 50-50 make/miss ratio, with a slightly higher chance of making the shot than missing it. As the shooter moves further from the basket to attempt shots outside of the paint but inside of the three point line, the miss percentage increases by approximately 10%, with now about 40.29% of the shots in this area being made. Outside of the three-point line, shooters have an even lesser chance of making the shot - approximately 65.64% of the shots attempted from outside of the three-point line result in misses. This graph supports the initial hypothesis that as the shooter attempts shots further from the basket, the miss rate increases.
+
+I next wanted to analyze whether the time at which the shot was attempted based on the shot clock. The NBA shot clock allows the players 24 seconds to attempt a shot. As the clock runs down, the pressure increases on the players to attempt the shot to avoid a 24-second violation - forcing them to turnover the ball to the other team and forfeit their shot attempt for that possession. It is more logical to attempt a shot even if the shooter isn't in an ideal position to shoot when the clock is nearing 0, but the pressure on the shooter increases dramatically at this time as they rush to trick defenders and find an opening to the basket. Because of this, I hypothesize that the shots attempted in the last five seconds of the shot clock will have a higher miss rate than those attempted with more time on the shot clock.
+
+```{r}
+# SHOT RESULT BASED ON TIME SHOT AT
+
+sum_shots_clock_0_5_missed <- sum(with(nba_shots, clock_bucket == "0-5" & shot_result == "missed"))
+sum_shots_clock_0_5_made <- sum(with(nba_shots, clock_bucket == "0-5" & shot_result == "made"))
+total_clock_0_5 <- sum_shots_clock_0_5_missed + sum_shots_clock_0_5_made
+
+sum_shots_clock_6_24_missed <- sum(with(nba_shots, clock_bucket == "6-24" & shot_result == "missed"))
+sum_shots_clock_6_24_made <- sum(with(nba_shots, clock_bucket == "6-24" & shot_result == "made"))
+total_clock_6_24 <- sum_shots_clock_6_24_missed + sum_shots_clock_6_24_made
+
+percent_missed_clock_0_5 <- round((sum_shots_clock_0_5_missed / total_clock_0_5) * 100, digits = 2)
+percent_made_clock_0_5 <- round((sum_shots_clock_0_5_made / total_clock_0_5) * 100, digits = 2)
+
+percent_missed_clock_6_24 <- round((sum_shots_clock_6_24_missed / total_clock_6_24) * 100, digits = 2)
+percent_made_clock_6_24 <- round((sum_shots_clock_6_24_made / total_clock_6_24) * 100, digits = 2)
+
+ggplot(nba_shots, aes(clock_bucket)) + 
+  scale_fill_manual(values=rgPalette) +
+  geom_bar(aes(fill = shot_result)) + 
+  xlab("Shot Clock at Time of Shot (seconds)") + 
+  ylab("Shots Attempted") + 
+  annotate("text", x = 1, y = 6000, label = paste(percent_missed_clock_0_5, "%"), color = "white") + 
+  annotate("text", x = 1, y = 17000, label = paste(percent_made_clock_0_5, "%"), color = "white") + 
+  annotate("text", x = 2, y = 30000, label = paste(percent_missed_clock_6_24, "%"), color = "white") + 
+  annotate("text", x = 2, y = 75000, label = paste(percent_made_clock_6_24, "%"), color = "white")
+  
+```
+
+As shown by the graph, there is a increase in miss rate of about 9.65% of shots attempted in the last five seconds of the shot clock when compared to those attempted with more time on the shot clock.
+
+Lastly, I wanted to analyze whether the height matchup between shooter and defender shows any relationship with the percentage of shots missed vs those made. To do this, I split the shots into five groups: (1) Defender is significantly taller than the shooter (by 5+ inches), (2) Defender is slightly taller than the shooter (by 2-4 inches), (3) Equal matchup (shooter and defender are within 1 inch in height of eachother), (4) Shooter is slightly taller than the defender (by 2-4 inches), and (5) Shooter is significantly taller than the defender (by 5+ inches). I plotted each of these categories like the previous visualizations and calculated the shot make/miss percentages in each. A shorter shooter will have a more difficult time trying to find a good shot if his defender is much larger, because the shooter in this situation may not be able to shoot the ball over a defender without it being blocked. Likewise, it would be easier for a significantly taller shooter to successfully shoot over a shorter defender because the defender will have a more difficult time blocking the shot and defending the shooter in general. Considering this, I hypothesize that the more height advantage that the defender has over the shooter, the higher the miss percentage will be.
+
+```{r}
+# SHOT RESULT BASED ON SHOOTER-DEFENDER HEIGHT MISMATCH
+
+sum_defender_much_taller_miss <- sum(with(nba_shots, mismatch_categories == "Defender Significantly Taller (-20-(-5))" & shot_result == "missed"))
+sum_defender_much_taller_made <- sum(with(nba_shots, mismatch_categories == "Defender Significantly Taller (-20-(-5))" & shot_result == "made"))
+total_defender_much_taller <- sum_defender_much_taller_miss + sum_defender_much_taller_made
+ 
+sum_defender_somewhat_taller_miss <- sum(with(nba_shots, mismatch_categories == "Defender Slightly Taller (-4-(-2))" & shot_result == "missed"))
+sum_defender_somewhat_taller_made <- sum(with(nba_shots, mismatch_categories == "Defender Slightly Taller (-4-(-2))" & shot_result == "made"))
+total_defender_somewhat_taller <- sum_defender_somewhat_taller_miss + sum_defender_somewhat_taller_made
+  
+sum_equal_matchup_miss <- sum(with(nba_shots, mismatch_categories == "Equal Matchup (-1-1)" & shot_result == "missed"))
+sum_equal_matchup_made <- sum(with(nba_shots, mismatch_categories == "Equal Matchup (-1-1)" & shot_result == "made"))
+total_equal_matchup <- sum_equal_matchup_miss + sum_equal_matchup_made
+  
+sum_shooter_somewhat_taller_miss <- sum(with(nba_shots, mismatch_categories == "Shooter Slightly Taller (2-4)" & shot_result == "missed"))
+sum_shooter_somewhat_taller_made <- sum(with(nba_shots, mismatch_categories == "Shooter Slightly Taller (2-4)" & shot_result == "made"))
+total_shooter_somewhat_taller <- sum_shooter_somewhat_taller_miss + sum_shooter_somewhat_taller_made
+  
+sum_shooter_much_taller_miss <- sum(with(nba_shots, mismatch_categories == "Shooter Significantly Taller (5-20)" & shot_result == "missed"))
+sum_shooter_much_taller_made <- sum(with(nba_shots, mismatch_categories == "Shooter Significantly Taller (5-20)" & shot_result == "made"))
+total_shooter_much_taller <- sum_shooter_much_taller_miss + sum_shooter_much_taller_made
+
+percent_missed_def_much_taller <- round((sum_defender_much_taller_miss / total_defender_much_taller) * 100, digits = 2)
+percent_made_def_much_taller <- round((sum_defender_much_taller_made / total_defender_much_taller) * 100, digits = 2)
+
+percent_missed_def_somewhat_taller <- round((sum_defender_somewhat_taller_miss / total_defender_somewhat_taller) * 100, digits = 2)
+percent_made_def_somewhat_taller <- round((sum_defender_somewhat_taller_made / total_defender_somewhat_taller) * 100, digits = 2)
+
+percent_missed_equal <- round((sum_equal_matchup_miss / total_equal_matchup) * 100, digits = 2)
+percent_made_equal <- round((sum_equal_matchup_made / total_equal_matchup) * 100, digits = 2)
+
+percent_missed_shooter_somewhat_taller <- round((sum_shooter_somewhat_taller_miss / total_shooter_somewhat_taller) * 100, digits = 2)
+percent_made_shooter_somewhat_taller <- round((sum_shooter_somewhat_taller_made / total_shooter_somewhat_taller) * 100, digits = 2)
+
+percent_missed_shooter_much_taller <- round((sum_shooter_much_taller_miss / total_shooter_much_taller) * 100, digits = 2)
+percent_made_shooter_much_taller <- round((sum_shooter_much_taller_made / total_shooter_much_taller) * 100, digits = 2)
+  
+xpositions <- c("Defender Significantly Taller (-20-(-5))", "Defender Slightly Taller (-4-(-2))", "Equal Matchup (-1-1)", "Shooter Slightly Taller (2-4)", "Shooter Significantly Taller (5-20)")
+
+ggplot(nba_shots, aes(mismatch_categories)) + 
+  scale_fill_manual(values=rgPalette) +
+  geom_bar(aes(fill = shot_result)) + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
+  scale_x_discrete(limits = xpositions) +
+  xlab("Shooter-Defender Height Mismatch Categories (inches)") +
+  ylab("Shots Attempted") +
+  annotate("text", x = 1, y = 5000, label = paste(percent_missed_def_much_taller, "%"), color = "white") + 
+  annotate("text", x = 1, y = 15000, label = paste(percent_made_def_much_taller, "%"), color = "white") + 
+  annotate("text", x = 2, y = 9000, label = paste(percent_missed_def_somewhat_taller, "%"), color = "white") + 
+  annotate("text", x = 2, y = 25000, label = paste(percent_made_def_somewhat_taller, "%"), color = "white") + 
+  annotate("text", x = 3, y = 10000, label = paste(percent_missed_equal, "%"), color = "white") + 
+  annotate("text", x = 3, y = 35000, label = paste(percent_made_equal, "%"), color = "white") + 
+  annotate("text", x = 4, y = 5000, label = paste(percent_missed_shooter_somewhat_taller, "%"), color = "white") + 
+  annotate("text", x = 4, y = 20000, label = paste(percent_made_shooter_somewhat_taller, "%"), color = "white") +
+  annotate("text", x = 5, y = 1700, label = paste(percent_missed_shooter_much_taller, "%"), color = "white") + 
+  annotate("text", x = 5, y = 8000, label = paste(percent_made_shooter_much_taller, "%"), color = "white")
+```
+
+As evident by the graph above, there is a visible trend where the taller the shooter, the lesser the miss percentage. It is unclear from the graph alone if there is a strong connection, as the miss percentage when the defender is significantly taller than the shooter appears to be about the same as when there is an equal matchup, however there does seem to be a relationship between the two when considering shots by slightly or significantly taller shooters. These shots seem to be more rare than those of other types, as the defending team would likely try to match up their players equally or to their advantage in terms of height.
+
+In conclusion, the analysis of the shot data above shows that shots attempted from further distances, in the final five seconds of the shot clock, or against significantly taller defenders are more likely to be misses than shots attempted closer to the basket, with more than five seconds on the shot clock, or when matched against a shorter defender.
+
+References:
+http://www.nba.com/analysis/rules_1.html
